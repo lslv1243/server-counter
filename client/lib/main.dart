@@ -1,4 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+class Client {
+  Future<int> getCount() async {
+    final response = await http.get(Uri.parse('http://localhost:8000/counter'));
+    return int.parse(response.body);
+  }
+
+  Future<int> incrementCount() async {
+    final response =
+        await http.get(Uri.parse('http://localhost:8000/counter/increment'));
+    return int.parse(response.body);
+  }
+}
 
 void main() {
   runApp(const MyApp());
@@ -55,16 +69,31 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  var _loading = false;
+  var _count = 0;
+  final _client = Client();
 
-  void _incrementCounter() {
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialCount();
+  }
+
+  void _loadInitialCount() async {
+    setState(() => _loading = true);
+    final count = await _client.getCount();
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _loading = false;
+      _count = count;
+    });
+  }
+
+  void _incrementCounter() async {
+    setState(() => _loading = true);
+    final newCount = await _client.incrementCount();
+    setState(() {
+      _loading = false;
+      _count = newCount;
     });
   }
 
@@ -109,17 +138,19 @@ class _MyHomePageState extends State<MyHomePage> {
               'You have pushed the button this many times:',
             ),
             Text(
-              '$_counter',
+              '$_count',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      floatingActionButton: _loading
+          ? const CircularProgressIndicator()
+          : FloatingActionButton(
+              onPressed: _incrementCounter,
+              tooltip: 'Increment',
+              child: const Icon(Icons.add),
+            ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
